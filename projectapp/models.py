@@ -7,6 +7,18 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+class ProfilePic(models.Model):
+    pic = models.ImageField(upload_to = 'profilepics')
+    user = models.OneToOneField(User,on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'ProfilePic'
+        verbose_name = 'pic'
+        verbose_name_plural = 'pics'    
+    def __str__(self):
+        return self.user.username
+
+
 class Products(models.Model):
     name = models.CharField(max_length=150)
     price = models.PositiveIntegerField(null=True)

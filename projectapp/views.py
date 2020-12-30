@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect,HttpResponse
-from .models import Products,Category
-from .forms import ProductModelForm, CategoryModelForm,RegistrationForm,EditUserForm
+from .models import Products,Category,ProfilePic
+from .forms import ProductModelForm, CategoryModelForm,RegistrationForm,EditUserForm,ProfilePicForm
 
 from django.contrib.auth.forms import UserChangeForm,UserCreationForm,PasswordChangeForm,PasswordResetForm
 from django.contrib.auth.models import User
@@ -86,15 +86,41 @@ def show_product(request,id):
 
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST, request.FILES)
+        form = RegistrationForm(request.POST)
+        form1 = ProfilePicForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            obj = form.save() 
+            if form1.is_valid():
+                obj2 = form1.save(commit=False)
+                obj2.user = obj
+                obj2.save()
             return redirect('home')
         else:
-            return render(request,'register.html',{'form':form})
+            return render(request,'register.html',{'form':form,'form1':form1})
     else:
-        form = UserCreationForm()
-        return render(request,'register.html',{'form':form})
+        form = RegistrationForm()
+        form1 = ProfilePicForm()
+        return render(request,'register.html',{'form':form, 'form1':form1})
+
+@login_required(login_url='/login/')
+def edit_user(request):
+    profilepic = ProfilePic.objects.get(user = request.user)
+    if request.method == 'POST':
+        form = EditUserForm(request.POST, instance = request.user)
+        form1 = ProfilePicForm(request.POST, request.FILES, instance = profilepic)
+        if form.is_valid():
+            obj = form.save() 
+            if form1.is_valid():
+                obj2 = form1.save(commit=False)
+                obj2.user = obj
+                obj2.save()
+            return redirect('home')
+        else:
+            return render(request,'register.html',{'form':form, 'form1':form1})
+    else:
+        form = EditUserForm(instance = request.user)
+        form1 = ProfilePicForm(instance=profilepic)
+        return render(request,'register.html',{'form':form,'form1':form1})
 
 def login_page(request):
     if request.method == 'POST':
@@ -113,18 +139,6 @@ def logout_fn(request):
     logout(request)
     return redirect('/login/')
 
-@login_required(login_url='/login/')
-def edit_user(request):
-    if request.method == 'POST':
-        form = EditUserForm(request.POST, instance = request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('home')
-        else:
-            return render(request,'register.html',{'form':form})
-    else:
-        form = EditUserForm(instance = request.user)
-        return render(request,'register.html',{'form':form})
 
 @login_required(login_url='/login/')
 def change_password(request):
