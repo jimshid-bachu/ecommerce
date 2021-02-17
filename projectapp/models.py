@@ -35,3 +35,8 @@ class Products(models.Model):
         verbose_name_plural = 'Products'    
     def __str__(self):
         return self.name
+
+class Cart(models.Model):
+    user = models.ForeignKey(User,on_delete=models.CASCADE, related_name="user_cart_item")
+    product = models.ForeignKey(Products,on_delete=models.CASCADE, related_name="product_cart_item")
+

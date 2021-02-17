@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<h1>My Cart</h1>
+<ul>
+<div class="d-flex flex-wrap">
+{% for cart_item in cart_items %}
+        <div class="card m-3" style="width: 18rem; ">
+          <img  src="{{ cart_item.product.image.url }}" class="card-img-top" alt="card image cap">
+          <div class="card-body">
+            <h5 class="card-title">{{ cart_item.product.name }}</h5>
+            <p class="card-text">{{ cart_item.product.description }}</p>
+            <h5 class="card-price">{{ cart_item.product.price }}</h5>
+            <div class="align-center">
+              <a href="{% url 'removecart' cart_item.id %}" class="btn btn-danger "><i class="fas fa-trash"></i></a>
+              <!-- <a href="#" class="btn btn-warning "><i class="fas fa-shopping-cart"></i></a> -->
+            </div>
+          </div>
+        </div>
+{% endfor %}
+</div>
+</ul>
+{% endblock %}

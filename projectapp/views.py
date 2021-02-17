@@ -1,23 +1,80 @@
 from django.shortcuts import render, redirect,HttpResponse
-from .models import Products,Category,ProfilePic
+from .models import Products,Category,ProfilePic,Cart
 from .forms import ProductModelForm, CategoryModelForm,RegistrationForm,EditUserForm,ProfilePicForm
 
 from django.contrib.auth.forms import UserChangeForm,UserCreationForm,PasswordChangeForm,PasswordResetForm
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate,login,logout, update_session_auth_hash
 from django.contrib.auth.decorators import permission_required,login_required
-
+from django.contrib import messages
+from django.views.generic import ListView, DetailView, TemplateView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin
 # Create your views here.
 
-@login_required(login_url='/login')
-def home(request):
-    products = Products.objects.all()
-    categories = Category.objects.all()
-    context={
-        'products': products,
-        'categories': categories
-    }
-    return render(request, 'home.html', context)
+import json
+from django.http import JsonResponse
+
+class HomeView(LoginRequiredMixin, ListView):
+    login_url = '/login'
+    template_name = 'home.html'
+    model = Products
+    # queryset = Products.objects.filter(price__gt = 102000)
+    context_object_name = 'products'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        return context
+
+
+
+class ProductDetailView(LoginRequiredMixin, DetailView):
+    template_name = 'product_detail.html'
+    model = Products
+    context_object_name = 'product'
+
+
+class CreateProductView(LoginRequiredMixin, CreateView):
+    template_name = 'add_product.html'
+    model = Products
+    fields = ['name','price','image','description','category']
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.user = self.request.user
+        obj.save()
+        return redirect('home')
+
+
+class EditProductView(LoginRequiredMixin, UpdateView):
+    template_name = 'add_product.html'
+    model = Products
+    fields = ['name','price','image','description','category']
+    success_url = '/'
+
+
+class DeleteProductView(LoginRequiredMixin, DeleteView):
+    template_name = 'add_product.html'
+    model = Products
+    success_url = '/'
+
+
+
+
+
+
+
+
+
+# @login_required(login_url='/login')
+# def home(request):
+#     products = Products.objects.all()
+#     categories = Category.objects.all()
+#     context={
+#         'products': products,
+#         'categories': categories
+#     }
+#     return render(request, 'home.html', context)
 
 @login_required
 def add_category(request):
@@ -32,34 +89,35 @@ def add_category(request):
         form = CategoryModelForm()
         return render(request,'add_category.html',{'form':form})
 
-@login_required
-def add_product(request):
-    if request.method == 'POST':
-        form = ProductModelForm(request.POST, request.FILES)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            obj.user = request.user
-            obj.save()
-            return redirect('home')
-        else:
-            return render(request,'add_product.html',{'form':form})
-    else:
-        form = ProductModelForm()
-        return render(request,'add_product.html',{'form':form})
+# @login_required
+# def add_product(request):
+#     if request.method == 'POST':
+#         form = ProductModelForm(request.POST, request.FILES)
+#         if form.is_valid():
+#             obj = form.save(commit=False)
+#             obj.user = request.user
+#             obj.save()
+#             return redirect('home')
+#             messages.add_message(request,'Hello world.')
+#         else:
+#             return render(request,'add_product.html',{'form':form})
+#     else:
+#         form = ProductModelForm()
+#         return render(request,'add_product.html',{'form':form})
 
-@login_required
-def edit_product(request,id):
-    product = Products.objects.get(id=id)
-    if request.method == 'POST':
-        form = ProductModelForm(request.POST, request.FILES,instance = product)
-        if form.is_valid():
-            form.save()
-            return redirect('home')
-        else:
-            return render(request,'add_product.html',{'form':form})
-    else:
-        form = ProductModelForm(instance = product)
-        return render(request,'add_product.html',{'form':form})
+# @login_required
+# def edit_product(request,id):
+#     product = Products.objects.get(id=id)
+#     if request.method == 'POST':
+#         form = ProductModelForm(request.POST, request.FILES,instance = product)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('home')
+#         else:
+#             return render(request,'add_product.html',{'form':form})
+#     else:
+#         form = ProductModelForm(instance = product)
+#         return render(request,'add_product.html',{'form':form})
 
 @login_required
 def delete_product(request,id):
@@ -153,3 +211,33 @@ def change_password(request):
     else:
         form = PasswordChangeForm(user = request.user)
         return render(request,'register.html',{'form':form})
+
+
+def fetch_products(request):
+    products = list(Products.objects.values())
+    return JsonResponse(products, safe=False)
+
+
+def addtocart(request,id):
+    product = Products.objects.get(id=id)
+    user = request.user
+    addcart = Cart.objects.filter(product=product,user=user)
+    if addcart:
+        addcart[0].delete()
+    else:
+        Cart.objects.create(product=product,user=user)
+    cart_count = Cart.objects.filter(user=user)
+    # return HttpResponse(str(len(count)))
+    return redirect('/')
+
+def showcart(request):
+    user = request.user
+    cart_items = Cart.objects.filter(user=user)
+    return render(request, 'cart.html',{'cart_items':cart_items})
+    # return render(request, 'products/base.html',{'length':item_num})
+
+def removecart(request, id):
+    cart_item = Cart.objects.get(id=id)
+    cart_item.delete()
+    return redirect('showcart')
+
